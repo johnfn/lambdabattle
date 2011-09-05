@@ -2,8 +2,6 @@ import Data.List
 import Data.Maybe
 import qualified Data.Map as Map
 
--- Allow shots to be taken
-
 data Player = PlayerOne | PlayerTwo deriving (Eq, Ord, Show)
 data Ship = Invalid | ShipData [(Int, Int)] Player deriving Show
 
@@ -59,24 +57,28 @@ gameLoop boards ships shots currentPlayer = do
   let myMap = fromJust $ Map.lookup (otherPlayer currentPlayer) boards
   let otherShips = fromJust $ Map.lookup (otherPlayer currentPlayer) ships
 
-  putStrLn (show otherShips)
-
   putStrLn ((show currentPlayer) ++ ", here is your board:")
-  putStrLn (showBoard (fromJust (Map.lookup currentPlayer boards)) [(fromJust (Map.lookup currentPlayer ships))])
+  putStrLn (showBoard (fromJust (Map.lookup currentPlayer boards)) (fromJust (Map.lookup currentPlayer ships)))
   putStrLn ((show currentPlayer) ++ ", take a shot. (x y)")
   input <- getLine
-  let coords = intArray input
-  -- if Map.lookup myMap coords /= "0"
+
+  let coords = (arr !! 0, arr !! 1) where arr = intArray input
+
+  --putStrLn "HIT!"
+  --putStrLn "Miss. :("
+  let updatedOtherShips = if coords `elem` (concat (map getPosition otherShips)) 
+                            then (map (\shipCoords -> (if coords `elem` shipCoords then (delete coords shipCoords) else shipCoords)) otherShips)
+                            else otherShips
 
   let updatedShots = Map.insertWith (++) currentPlayer [coords] shots
-  putStrLn (show updatedShots)
 
   gameLoop boards ships updatedShots (otherPlayer currentPlayer)
 
 main = do
   let boards = Map.fromList $ zip players $ take 2 $ repeat $ Map.fromList $ zip (emptyBoard 10) (repeat "0")
   shipList <- mapM getShip players
-  let ships = Map.fromList (zip players shipList)
+  --TODO: This is pretty silly since right now shipList is not an array (False name!) Should fix in future... maybe
+  let ships = Map.fromList (zip players (map (\x -> [x]) shipList))
   let shots = Map.fromList (zip players (repeat []))
 
   putStrLn "This. Is. BATTLELAMBDA. It's like Battleship, but better.\n"
