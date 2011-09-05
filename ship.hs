@@ -11,6 +11,9 @@ repr PlayerTwo = "2"
 getPosition :: Ship -> [(Int, Int)]
 getPosition (ShipData pos _) = pos
 
+getPlayer :: Ship -> Player
+getPlayer (ShipData _ player) = player
+
 playerName :: Player -> String
 playerName PlayerOne = "Player One"
 playerName PlayerTwo = "Player Two"
@@ -53,6 +56,13 @@ emptyBoard :: Int -> [(Int, Int)]
 emptyBoard size = [(i, j) | i <- [0..adjSize], j <- [0..adjSize]]
                 where adjSize = size - 1
 
+removeFromShip :: (Int, Int) -> Ship -> Ship
+removeFromShip position ship@(ShipData coords player) =
+  if position `elem` coords then (ShipData (delete position coords) player) else ship
+
+removePosition position ships = 
+  map (\shipCoords -> removeFromShip position shipCoords) ships
+
 gameLoop boards ships shots currentPlayer = do
   let myMap = fromJust $ Map.lookup (otherPlayer currentPlayer) boards
   let otherShips = fromJust $ Map.lookup (otherPlayer currentPlayer) ships
@@ -64,20 +74,26 @@ gameLoop boards ships shots currentPlayer = do
 
   let coords = (arr !! 0, arr !! 1) where arr = intArray input
 
-  --putStrLn "HIT!"
-  --putStrLn "Miss. :("
-  let updatedOtherShips = if coords `elem` (concat (map getPosition otherShips)) 
-                            then (map (\shipCoords -> (if coords `elem` shipCoords then (delete coords shipCoords) else shipCoords)) otherShips)
-                            else otherShips
+  --Nasty because you have to go into a data structure and change it.
+  updatedOtherShips <- if coords `elem` (concat (map getPosition otherShips)) 
+                            then do
+                              putStrLn "HIT!"
+                              return (removePosition coords otherShips)
+                            else do
+                              putStrLn "Miss. :("
+                              return (otherShips)
 
   let updatedShots = Map.insertWith (++) currentPlayer [coords] shots
+  let updatedShips = Map.insert other updatedOtherShips ships
 
-  gameLoop boards ships updatedShots (otherPlayer currentPlayer)
+  gameLoop boards updatedShips updatedShots other
+
+  where other = (otherPlayer currentPlayer)
 
 main = do
   let boards = Map.fromList $ zip players $ take 2 $ repeat $ Map.fromList $ zip (emptyBoard 10) (repeat "0")
   shipList <- mapM getShip players
-  --TODO: This is pretty silly since right now shipList is not an array (False name!) Should fix in future... maybe
+  --TODO: This is pretty silly since right now shipList is not an array (bad name!) Should fix in future... maybe
   let ships = Map.fromList (zip players (map (\x -> [x]) shipList))
   let shots = Map.fromList (zip players (repeat []))
 
