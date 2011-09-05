@@ -86,7 +86,11 @@ gameLoop boards ships shots currentPlayer = do
   let updatedShots = Map.insertWith (++) currentPlayer [coords] shots
   let updatedShips = Map.insert other updatedOtherShips ships
 
-  gameLoop boards updatedShips updatedShots other
+  if (length (concat (map getPosition updatedOtherShips))) == 0
+    then do
+      putStrLn "You win."
+    else do
+      gameLoop boards updatedShips updatedShots other
 
   where other = (otherPlayer currentPlayer)
 
